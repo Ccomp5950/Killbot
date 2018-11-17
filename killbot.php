@@ -620,6 +620,9 @@ class IRCBot
 	}
 	if(isset($this->joined[$this->sender][$channel])) {
 		if($this->joined[$this->sender][$channel] + 3 > $microtime) {
+			#If we are being joinpart flooded then we need to speed up reaction times.
+			$this->under_attack = time() + 300;
+
 			$this->joined[$this->sender]["naughty"]++;
 			$this->joined[$this->sender]["last_infraction"] = $microtime;
 			if($this->joined[$this->sender]["naughty"] > 3)
