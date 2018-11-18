@@ -13,6 +13,75 @@ $max_message_length = 300;
 $quiet_chan = array();
 $validated = array();
 
+class IP_HASH
+{
+	
+	private $hash = array();
+
+	public function add_user($nick, $ip, $naughty)
+	{
+		if($this->ip_listed($ip)) {
+			$this->hash[$ip]["member"][] = $nick;
+			$this->hash[$ip]["naughty"] += $naughty;
+		}
+		$this->hash[$ip] = array("member" => array($nick), "naughty" => $naughty);
+	}
+
+	public function remove_user($nick, $ip)
+	{
+		if($this->ip_listed($ip)) {
+			$index = array_search($nick, $this->hash[$ip]["member"]);
+			if($index !== FALSE) {
+				#remove the user from the member list.
+				array_splice($this->hash[$ip]["member"], $index, 1);
+
+				#If Member list is empty delete the ip tracking.
+				if(count($this->hash[$ip]["member"]) == 0) {
+					unset($this->hash[$ip]);
+				}
+			}
+		}
+	}
+
+	public function change_nick($oldnick, $newnick, $ip)
+	{
+		if($this->ip_listed($ip)) {
+			$index = array_search($oldnick, $this->hash[$ip]["member"]);
+			if($index !== FALSE) {
+				$this->hash[$ip]["member"][$index] = $newnick;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public function check_naughty($ip) {
+		if($this->ip_listed($ip)) {
+			return $this->hash[$ip]["naughty"];
+		}
+		return 0;
+	}
+
+	public function get_members($ip) {
+		if($this->ip_listed($ip)) {
+			return $this->hash[$ip]["member"];
+		}
+		return array();
+	}
+
+	private function ip_listed($ip) {
+		if(array_key_exists($ip, $this->hash)) return true;
+		return false;
+	}
+
+	public function add_naughty($ip, $naughty) {
+		if($this->ip_listed($ip)) {
+			$this->hash[$ip]["naughty"] += $naughty;
+		}
+	}
+
+}
+
 class IRCBot
 {
 
@@ -41,6 +110,7 @@ class IRCBot
     var $last_said_flag = 0;
     var $kline_exempt = array("nickserv", "chanserv", "hostserv", "operserv");
     var $under_attack = 0;
+    var $IP_HASH = null; 
     /*
 
     Construct item, opens the server connection, logs the bot in
@@ -55,7 +125,7 @@ class IRCBot
 
     {
 
-
+	$this->IP_HASH = new IP_HASH();
         $this->socket = fsockopen($config['server'], $config['port']);
         stream_set_blocking($this->socket, 0);
         stream_set_timeout($this->socket, 0, 250000); // .5 seconds = 500000 microseconds
@@ -1078,18 +1148,6 @@ class IRCBot
             socket_shutdown($this->socket);
             socket_close($this->socket);
         }
-        if ($this->socket = fsockopen($config['server'], $config['port'])) ;
-        {
-            stream_set_timeout($this->socket, 0, 5000); // .5 seconds = 500000 microseconds
-            $this->login($config);
-            $identified = 0;
-            return 1;
-        }
-    }
-
-    function get_url_content($url)
-    {
-        $crl = curl_init();
         $timeout = 5;
         $user = "flowbot";
         $pw = "HIh823kiv892714lasd";
