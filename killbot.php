@@ -1148,17 +1148,13 @@ class IRCBot
             socket_shutdown($this->socket);
             socket_close($this->socket);
         }
-        $timeout = 5;
-        $user = "flowbot";
-        $pw = "HIh823kiv892714lasd";
-        curl_setopt($crl, CURLOPT_URL, $url);
-        curl_setopt($crl, CURLOPT_USERPWD, "$user:$pw");
-        curl_setopt($crl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-        curl_setopt($crl, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($crl, CURLOPT_CONNECTTIMEOUT, $timeout);
-        $ret = curl_exec($crl);
-        curl_close($crl);
-        return $ret;
+        if ($this->socket = fsockopen($config['server'], $config['port'])) ;
+        {
+            stream_set_timeout($this->socket, 0, 5000); // .5 seconds = 500000 microseconds
+            $this->login($config);
+            $identified = 0;
+            return 1;
+        }
     }
 
     function log_write($logEntry) {
